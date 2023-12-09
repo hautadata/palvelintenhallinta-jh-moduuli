@@ -214,6 +214,55 @@ Jes! Hommahan toimii mainiosti. Tiedostossa on haluamamme aikaleima, sekä kaikk
 
 ---
 
+## Automaattiset päivittelyt crontabilla.
+
+Sitten halutaan että tiedostoa päivitetään automaattisesti tunnin välein. METAR-tiedotteet päivitetään myös vain tunnin välein, ellei säässä ole jotain merkittäviä muutoksia lyhyemmän ajan sisällä. Käytin ensimmäisessä vaiheessani jo crontabia, joten otetaan se käyttöön nytkin. Tästä tulikin hieman hankaluuksia, kun koitin muokata crontabia Saltin kautta. Yritin komentoa `$ sudo salt 't001' cmd.run "echo "0 * * * * metarfinland" | crontab -e/-l"`, useampaan kertaan. En kuitenkaan saanut echolle lisättyä haluamaani syntaksia tiedostoon. Tämä varmaankin johtuu siitä, että crontab-komento avaa aina editorin, ja niit
+ei oikeen Saltin kautta voi käyttää. 
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/81efa7b0-dbb2-45f2-9ffd-a6b3e99995e5)
+>Yllä: crontab-lisäys ei toimi.
+
+---
+
+Päätin käydä tekemässä muutokset paikan päällä. Poistuin tmasterin yhteydeltä komennolla `$ exit` ja otin ssh-yhteyden t001-orjaan komennolla `$ vagrant ssh t001`.
+
+Avasin crontab-tiedoston komennolla `$ sudo crontab -e` , ja lisäsin sinne hieman aiemmasta poikkeavan syntaksin `*/60 * * * * /usr/local/bin/metarfinland`. Tämä siis tarkoittaa että jokaisella tunnin 60. minuutilla järjestelmä ajaa automaattisesti metarfinland-scriptin.
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/8f1248cb-5f43-482d-9e98-34e1c3ab98ae)
+>Yllä: crontabilla automatisointi.
+
+---
+
+Ei auta kuin odotella, kun kello ei vielä ole tasatuntia. Tällä välin palaan tmasterille, ja teen sinne myös crontab-muutoksen, joka puskee tiedoston orjalta masterille automaattisesti myös kerran tunnissa heti metar-tiedoston päivityksen jälkeen. Avaan crontabin komennolla `$ crontab -e` , ja lisään sinne seuraavan syntaksin `*/01 * * * * sudo salt 't001' cp.push /usr/local/metar/metarHelsinki.txt`
+
+Tämä syntaksi ajaa jäljempänä olevan komennon jokaisella tunnin ensimmäisellä minuutilla. cp.push taas puskee tiedoston orjalta herralle sen oletus minioncache-sijaintiin. (Salt Project s.a.)
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/50eeb807-f740-47e4-b357-feba5c06d6b3)
+>Yllä: Automaattisen puskun crontab-syntaksi.
+
+---
+
+Pikakelaus seuraavaan tasatuntiin, ja pääsemme tarkastamaan miten toimii! Ylempänä mainitsemani minioncachen polku on herralla /var/cache/salt/minion/t001/files/ , joka sisältää orjan t001 tiedostot, jota sieltä pusketaan herralle. Tässä kohtaa näköjään itse orjan tiedostopolkukin on päässyt mukaan, eikä pelkkä tiedosto. Mennään siis aikas syvälle, ja orjalta puskettu tiedosto löytyy nyt herralta osoitteesta `/var/cache/salt/minion/t001/files/usr/local/metar/metarHelsinki.txt`
+
+Suoritetaan cat-komento sille, ja nähdään että homma toimii erittäin hyvin! Meillä on tasatunnila 19:00:01 UTC (Suomen aika +2 tuntia) aikaleima, ja sen alla kenttien METAR-tiedotteet. Ne ovat päivittyneet n. 10 minuuttia aikaisemmin, UTC-ajalla 1850. Jes!
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/4cde78a2-9028-442f-a0c6-17c5f216f139)
+>Yllä: metarHelsinki.txt puskettu ja päivitetty automaattisesti orjalta herralle. Huom. history tail -n 2 (komentohistoria, viimeisimmät 2 komentoa) -komento, jolla vain vakuutan että ajoin juuri cat-komennon, koska alkua ei tuossa printtien seassa näy.
+
+---
+
+Huhhuh, hyvin näyttää toimivan. Käydään seuraavaksi toisen orjan kimppuun, ja pistetään se tallentamaan Euroopan 10:n suurimman kentän METAR-tiedotteet meille.
+
+## METAR - Orja nro 2.
+
+
+
+
+
+
+
+
+
 
 
 
@@ -231,6 +280,9 @@ Jes! Hommahan toimii mainiosti. Tiedostossa on haluamamme aikaleima, sekä kaikk
 Awati, R. Techtarget. 2/2023. What is crontab?. Luettavissa: https://www.techtarget.com/searchdatacenter/definition/crontab. Luettu: 9.12.2023.
 
 Ilmatieteenlaitos. Ilmailusää. Luettavissa: https://ilmailusaa.fi/index.html#flash_checkbox=checked#id=radar#map=southern-finland#level=null#top=0. Luettu: 9.12.2023.
+
+Salt Project. s.a. SALT.MODULES.CP. Luettavissa: https://docs.saltproject.io/en/latest/ref/modules/all/salt.modules.cp.html. Luettu: 9.12.2023.
+
 
 
 
