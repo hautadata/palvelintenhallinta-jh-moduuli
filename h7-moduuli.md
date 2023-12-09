@@ -6,6 +6,10 @@ Tässä raportissa käydään läpi tekemääni Palvelinten Hallinta -kurssin mi
 
 Päätin alkaa keräämään säätietoja. Tavoitteena on orjakoneilla ajaa automaattisesti 30 minuutin välein komento, joka printtaa useamman kaupungin sen hetkisen sään, ja lisää mukaan vielä aikaleiman. Tiedot tallennetaan yhteen jokaiselle kaupungille erilliseen ”loki”-tiedostoon, joka päivittyy aina kun komento ajetaan automaattisesti uudelleen. Tämän jälkeen automatisoidaan myös se, että orjakoneet lähettävät säätietolokin herrakoneelle tietyn väliajoin.
 
+Tai näin ainakin luulin aluksi alkavani tekemään... Matkan varrella huomasin että Saltissa printti ei ihan vastannut sitä, mitä se oli testatessa.
+
+Lopulta vaihdoin hieman ideaa, ja suunnitelma vaihtuikin siihen, että 2 orjakonetta printtaavat minulle ilmailussa käytettäviä METAR-säätiedotteita. Tästä lisää alempana!
+
 ## Ensin käsin…
 
 Kuten kurssilla on jo varmasti opittu, lähdetään ensin kokeilemaan käsin, ja vasta sen jälkeen automatisoimaan. Tätä varten hyödynnän aiemmissakin tehtävissä käyttämääni, kurssin alussa luotua Debian 12-virtuaalikonetta VirtualBoxissa.
@@ -205,7 +209,7 @@ Sittenhän voidaan lähteä ajamaan komentoja orjalle. Tässä kohtaa ajetaan va
 
 ---
 
-Luon vielä itse scriptissä olevan hakemiston orjakoneelle komennolla `$ sudo saöt 't001' cmd.run "mkdir /usr/local/metar"` , jotta siitä ei tule erroreita komentoja ajettaessa. Tämän jälkeen ajetaan itse komento orjalla Saltilla, eli syötetään komento `$ sudo salt 't001' cmd.run "metarfinland"` . Tästä ei tullut mitään palautetta, mutta voimme cat-komennolla tarkistaa onko homma toiminut. Eli komento on `$ sudo salt 't001' cmd.run "cat /usr/local/metar/metarHelsinki.txt"`.
+Luon vielä itse scriptissä olevan hakemiston orjakoneelle komennolla `$ sudo salt 't001' cmd.run "mkdir /usr/local/metar"` , jotta siitä ei tule erroreita komentoja ajettaessa. Tämän jälkeen ajetaan itse komento orjalla Saltilla, eli syötetään komento `$ sudo salt 't001' cmd.run "metarfinland"` . Tästä ei tullut mitään palautetta, mutta voimme cat-komennolla tarkistaa onko homma toiminut. Eli komento on `$ sudo salt 't001' cmd.run "cat /usr/local/metar/metarHelsinki.txt"`.
 
 Jes! Hommahan toimii mainiosti. Tiedostossa on haluamamme aikaleima, sekä kaikkien kenttien METAR-tiedot!
 
@@ -255,21 +259,70 @@ Huhhuh, hyvin näyttää toimivan. Käydään seuraavaksi toisen orjan kimppuun,
 
 ## METAR - Orja nro 2.
 
+Sitten lähdetään tekemään sama setti toiselle orjalle, hieman eri twistillä. En tässä raportoi ihan yhtä yksityiskohtaisesti, koska teen käytännössä vain uudelleen kaiken mitä tuossa ylempänäkin. Mutta katsotaan pääasiat läpi!
+
+Loin herralla uuden kansion aiemmassa käytetyn kansion sisään. Komento `$ mkdir /srv/salt/metar/metareurope`. Luon sinne scriptitiedoston komennolla `$ sudo nano metareurope` . Sisältö sama kuin aiemmassakin, mutta kenttien koodit muuttuneet. Muutin ne Euroopan 10:n suurimman kentän mukaisiksi, ja listalta löytyy mm. Lontoo Heathrow, Amsterdam, Istanbul ja Pariisi Charles De Gaulle. (Wikipedia, 11/2023)
+
+```
+#!/bin/bash
+
+data_dir="/usr/local/metar"
+
+data_file="$data_dir/metarEurope.txt"
+
+{
+echo $(date);
+metar EGLL; metar LFPG; metar EHAM;
+metar LTFM; metar LEMD; metar EDDF;
+metar LEBL; metar EGKK; metar LIRF; 
+metar LFPO;
+} >> "$data_file"
+```
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/a2acc420-c29a-4887-8a90-3705356834cf)
+>Yllä: Toisen orjan scriptitiedosto.
+
+---
+
+Sitten inits.sls komennolla `$ sudoedit init.sls` . Sen sisältö sama kuin ykkösorjalla, mutta eri tiedostopoluilla.
+
+```
+/usr/local/bin/metar:
+  file.managed:
+    - source: salt://metar/metareurope/metareurope
+    - mode: "0755"
+```
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/7bef034d-b703-4dd1-931a-02e7fe4a96ff)
+>Yllä: Toisen orjan init.sls
+
+---
+
+Sitten ei muuta kuin komentoa kehiin. Ajetaan tila toiselle orjalle komennolla `$ sudo salt 't002' state.apply metar/metareurope`. Sieltä tuleekin onnistunut lopputulos, succeeded: 1 (changed= 1).
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/5a228f4a-5554-499d-b2a0-76bedb82a423)
+>Yllä: state.apply onnistunut.
+
+---
+
+Sitten ajetaan jälleen komento `$ sudo salt 't001' cmd.run "metar"` . Sitten pitää tehdä crontab-päivitys, joten siirrytään t002-orjalle exitillä ja `$ vagrant ssh t002`. Siellä `$ sudo crotnab -e` ja lisätään syntaksi `*/60 * * * * /usr/local/bin/metar`. Eli metar-scripti ajetaan automaattisesti tasatunnein.
+
+Siirrytään takaisin herralle, ja tehdään myös sinne crontab-muutos, jotta toisenkin orjan tiedostot pusketaan automaattisesti herralle. tmasterilla `$ crontab -e` ja lisätään sinne `*/01 * * * * sudo salt 't002' cp.push /usr/local/metar/metarEurope.txt`. 
+
+Sitten odotellaan tasatuntia. Ja kun se tuli, käydään katsomassa osoite `/var/cache/salt/minion/t002/files/usr/local/metar/`. Eli tällä kertaa t002-koneen lähettämät tiedostot. Siellä komento `$ cat metarEurope.txt` , ja näemme että tälläkin orjalla homma toimii moitteettomasti. Aikaleima tasatunnilta, alla halutut METAR-tiedotteet. Ja mikä parasta, tiedosto päivittynyt ja tullut herralle automaattisesti. Nyt on huojentunut olo!
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/87b84f3f-b9f0-4295-ba52-4925557cca1e)
+>Yllä: t002-orjan puskema metar-tiedosto. Toimii!
+
+---
+
+Huhhuh. Käyn vielä katsomassa parin tunnin päästä tuleeko muutoksia ja tiedostoja tosiaan vieläkin automaattisesti, ja siltä se tosiaan näyttää. Kävin katsomassa t001-orjan lähettämää dataa, ja allaolevasta kuvasta näkyy että 22:00 UTC on tullut viimeinen, ja koneeni kello on 0:26, eli kyllä viimeinen muutos on tullut viimeisen tasatunnin aikana. Ja tiedostoa scrollaamalla näen, että muutoksia on tullut näitä ennenkin! Pidetään vagrant päällä, ja katsotaan kuinka iso tiedosto saadaan kasaan :D
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/f36f6c91-a460-41b0-ad5d-c3a2ccc3556b)
+>Yllä: Hyvin toimii
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+## Itsearviointi
 
 
 
@@ -282,6 +335,8 @@ Awati, R. Techtarget. 2/2023. What is crontab?. Luettavissa: https://www.techtar
 Ilmatieteenlaitos. Ilmailusää. Luettavissa: https://ilmailusaa.fi/index.html#flash_checkbox=checked#id=radar#map=southern-finland#level=null#top=0. Luettu: 9.12.2023.
 
 Salt Project. s.a. SALT.MODULES.CP. Luettavissa: https://docs.saltproject.io/en/latest/ref/modules/all/salt.modules.cp.html. Luettu: 9.12.2023.
+
+Wikipedia. 12.11.2023. List of the busiest airports in Europe. Luettavissa: https://en.wikipedia.org/wiki/List_of_the_busiest_airports_in_Europe. Luettu: 9.12.2023.
 
 
 
