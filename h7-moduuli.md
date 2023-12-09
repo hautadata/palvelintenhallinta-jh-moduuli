@@ -72,6 +72,66 @@ Sitten automatisoinnin kimppuun?
 
 ## ... Vasta sitten automaattisesti
 
+Okei... Tähän kohtaan sellainen juonenkäännös että lopputulos ei ollut aivan toivottu :D joten käydään asia suht nopeasti tässä läpi kelattuna, koska vaihdoin tuon säädatan pois kokonaan.
+
+Katsoin omaa h5 - CSI Kerava raporttia, sillä tulin tekemään uuden komennon Saltilla samalla tavalla kuin tuossa tehtävässä. Eli 
+
+Tässä kohtaa Vagrant päälle Windowsin terminalissa komennolla `$ vagrant up`. Sen jälkeen yhteys tmasteriin komennolla `$ vagrant ssh tmaster` . Loin uuden kansion /srv/salt/ hakemistoon komennolla `$ mkdir /srv/salt/weather`.
+
+Loin tänne uuden scriptin, jonka oli tarkoitus tallentaa Helsingin säädataa. Sisältö oli seuraavanlainen:
+
+```
+#!/bin/bash
+
+log_dir="/usr/local/weather/finland"
+
+helsinki_log="$log_dir/helsinki.txt"
+
+{ echo $(date); curl -s wttr.in/helsinki | head -n 7; } >> "$helsinki_log"
+```
+
+Eli samaa kuin käsin testailussakin. Curlilla haetaan Helsingin säätiedot, ja tallennetaan ne helsinki.txt -nimiseen tiedostoon osoitteessa /usr/local/weather. Loin vielä uuden, yllä mainutun hakemiston orjalle komennolla `$ sudo salt 't001' cmd.run "mkdir /usr/local/weather/finland"`.
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/c9687b41-a287-4f06-a011-27dbd441f0b2)
+>Ylä: Scripti.
+
+---
+
+Sitten tarvittiin vielä init.sls -tiedosto, joka kertoo orjalle että missä komento sijaitsee. Se oli tämän tyylinen:
+
+```
+
+/usr/local/bin/weatherfi:
+  file.managed:
+    - source: salt://weather/finland
+    - mode: "0755"
+```
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/2b3bf16d-415f-4da9-be58-ec3d0d19079d)
+>Yllä: init.sls
+
+---
+
+Lähdin sitten ajamaan state.applyta orjalle komennolla `$sudo salt 't001' state.apply weather`. Tässä ei ongelmaa:
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/52d59a44-de46-4fab-91ca-d576f5a7e33e)
+>Yllä: Onnistunut state.apply
+
+---
+
+Katsoin komennolla `$ sudo salt 't001' cmd.run "ls /usr/local/bin"` , ja sieltä löytyi weatherfi -niminen scripti. Voimme siis ajaa komennon tällä nimellä. Ajoinkin seuraavaksi komennon `$ sudo salt 't001' cmd.run "weatherfi"` . Summary näytti jälleen hyvältä, mutta tässä kohtaa menin katsomaan lopputulosta itse luotuun tiedostoon ajamalla komennon `$ sudo salt 't001' cmd.run "cat /usr/local/weather/finland/helsinki.txt`.
+
+No perhana, ei se näytäkään ihan yhtä nätiltä miltä se näytti aiemmin eri koneella testatessa... :D 
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/fed773c9-bd1a-44e5-8e3f-3419107170e7)
+>Yllä: Vähän erinäköistä kuin alussa testatessa...
+
+
+Ajattelin että ei tuota oikein jaksa katsella, joten päätin yrittää toista dataa. Haetaan tällä kertaa METAR-tietoja, sillä niitä olen itse asiassa aiemmin yrittänyt hakea Linuxin komentoriviltä ja onnistunut siinä.
+
+Eli tässä kohtaa unohdettiin tämä. Veikkaan että tuo näyttää sen takia erilaiselta, kun käytän Vagrantia Windowsilla. Windowsin komentorivi ja Linux eivät varmaan ihan samoissa mittasuhteissa ole, ja siksi tuo teksti "wrappaantyy" eri tavalla tässä. Mutta ei se mitään.
+
+## Homma uusiksi, METAR
 
 
 
