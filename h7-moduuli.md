@@ -154,6 +154,71 @@ Lähdetään tekemään vaikka niin, että orja numero 1 tallentaa jatkuvasti Su
 
 METAR on siinä mielessä helpompi, koska sen tosiaan saa suoraan komentoriviltä. Ei tarvita curleja.
 
+Lähdin luomaan tätä varten uuden kansion tmasterilla /srv/saltiin komennolla `$ mkdir /srv/salt/metar`. Tänne on tarkoitus tulla scripti, sekä init.sls-tiedosto. Loin scriptitiedoston komennolla `$ sudo nano finlandmetar` . Tänne kirjoitin seuraavanlaisen scriptin:
+
+```
+#!/bin/bash
+
+data_dir="/usr/local/metar"
+
+data_file="$data_dir/metarFinland.txt"
+
+{
+echo $(date);
+metar EFET; metar EFHA; metar EFHK;
+metar EFIV; metar EFJO; metar EFJY;
+metar EFKE; metar EFKI; metar EFKK; 
+metar EFKS; metar EFKT; metar EFKU; 
+metar EFLP; metar EFMA; metar EFMI; 
+metar EFOU; metar EFPO; metar EFRO; 
+metar EFSA; metar EFSI; metar EFTP; 
+metar EFTU; metar EFUT; metar EFVA;
+} >> "$data_file"
+```
+Scripti luo /usr/local/metar -hakemistoon uuden tiedoston nimeltä "metarFinland.txt". Tämä tiedosto sisältää METAR-tiedot jokaiselta Suomen kaupallisessa- ja sotilaskäytössä olevalta kentältä. En lähde koodeja avaamaan, mutta esim. EFJY = Jyväskylä, EFTU = Turku jne. Kenttien koodit on kopioitu Ilmatieteenlaitoksen ilmailusään sivuilta, josta myös löytää kyseiset METAR-tiedotteet. (Ilmatieteenlaitos)
+
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/11005d90-8bba-4b38-b33a-3967e0116b4a)
+>Yllä: Metarin scriptitiedosto.
+>
+
+---
+
+Tämän jälkeen tarvittiin vielä init.sls-tiedosto, joka kertoo orjakoneelle missä scripti sijaitsee ja minkä se kopioi orjalle. Komennolla `$ sudoedit init.sls` editori auki ja sinne seuraava sisältö:
+
+```
+/usr/local/bin/metarfinland:
+  file.managed:
+    - source: salt://metar/finlandmetar
+    - mode: "0755"
+```
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/d2d8b48c-15ee-42e9-8b8c-9936a8c53aa1)
+>Yllä: init.sls tiedosto.
+
+---
+
+Sittenhän voidaan lähteä ajamaan komentoja orjalle. Tässä kohtaa ajetaan vain orjalle numero 1, eli ei käytetä salt-funktiossa tähteä *. Ajan komennon `$ sudo salt 't001' state.apply metar` , ja saan heti lupaavan summaryn. Uusi tiedosto on luotu, ja succeeded: 1 (changed= 1). 
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/4318cacf-ae29-4a52-99b4-26c7513eead8)
+>Yllä: Orjalle heinää.
+
+---
+
+Luon vielä itse scriptissä olevan hakemiston orjakoneelle komennolla `$ sudo saöt 't001' cmd.run "mkdir /usr/local/metar"` , jotta siitä ei tule erroreita komentoja ajettaessa. Tämän jälkeen ajetaan itse komento orjalla Saltilla, eli syötetään komento `$ sudo salt 't001' cmd.run "metarfinland"` . Tästä ei tullut mitään palautetta, mutta voimme cat-komennolla tarkistaa onko homma toiminut. Eli komento on `$ sudo salt 't001' cmd.run "cat /usr/local/metar/metarHelsinki.txt"`.
+
+Jes! Hommahan toimii mainiosti. Tiedostossa on haluamamme aikaleima, sekä kaikkien kenttien METAR-tiedot!
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/1a6b0cce-23fa-4750-90aa-3eb19c7b0dfb)
+>Yllä: metarHelsinki.txt sisältö päivittynyt onnistuneesti!
+
+---
+
+
+
+
+
+
 
 
 
@@ -164,6 +229,8 @@ METAR on siinä mielessä helpompi, koska sen tosiaan saa suoraan komentorivilt�
 ## Lähteet
 
 Awati, R. Techtarget. 2/2023. What is crontab?. Luettavissa: https://www.techtarget.com/searchdatacenter/definition/crontab. Luettu: 9.12.2023.
+
+Ilmatieteenlaitos. Ilmailusää. Luettavissa: https://ilmailusaa.fi/index.html#flash_checkbox=checked#id=radar#map=southern-finland#level=null#top=0. Luettu: 9.12.2023.
 
 
 
