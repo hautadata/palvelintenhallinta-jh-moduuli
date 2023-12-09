@@ -131,7 +131,30 @@ Ajattelin että ei tuota oikein jaksa katsella, joten päätin yrittää toista 
 
 Eli tässä kohtaa unohdettiin tämä. Veikkaan että tuo näyttää sen takia erilaiselta, kun käytän Vagrantia Windowsilla. Windowsin komentorivi ja Linux eivät varmaan ihan samoissa mittasuhteissa ole, ja siksi tuo teksti "wrappaantyy" eri tavalla tässä. Mutta ei se mitään.
 
-## Homma uusiksi, METAR
+## Homma uusiksi, METAR -johdanto
+
+Ilmailusta kiinnostuneena sain tämän jälkeen idean kerätä lentoasemilla raportoitavia METAR-säähavaintotiedotteita. Niitä käytetään kansainvälisessä siviili- ja liikenneilmailussa ilmoittamaan ajankohtaista säädiagnostiikkaa, joiden perusteella mm. tehdään lentosuunnitelmia ja tiedotetaan lentäjiä lähtö- sekä kohdekenttien sääoloista.
+
+Linuxin komentoriviltä saa suoraan ladattua METAR-palvelun komennolla `$ sudo apt install metar`. Tämän jälkeen voit tarkistaa minkä tahansa kaupungin METAR-tiedotteen syöttämällä metar -d sekä lentoaseman ICAO-koodin. (Kansainvälisen siviili-ilmailujärjestön jokaiselle maailman lentoasemalle myöntämä 4-kirjaiminen tunnistekoodi)
+
+Alhaalla kuvassa näkyy Debian 12-komentorivillä ajettu komento `$ metar -d EFHK`, joka kertoo Helsinki-Vantaan lentoaseman viimeisimmän METAR-tiedotteen. 
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/6293e9fa-c1ea-49e5-b373-e8e89264da38)
+>Yllä: METAR-tiedote
+
+Punaisella alleviivattu pätkä on standardoitu kirjoitusmuoto, jota mm. lentäjät lukevat. Näyttää melkoiselta numero- ja kirjainhelvetiltä, mutta tuosta pystyy lukemaan mm. tuulen ja tuulenpuuskien suunnan sekä nopeuden, näkyvyyden, lämpötilan sekä ilmanpaineen. Ensin vain pitää opetella lukemaan tuota koodinpätkää.
+
+Lisäämällä komennon keskelle -d (decode metar), saamme printtiin puretun ja kieltämättä helpommin luettavan koosteen säätiedoista.
+
+## METAR Saltissa
+
+Aiemmin yritettiin jo Vagrantilla ja Saltilla saada tiedostot ja herralta orjalle -komennot toimimaan, joten ei tässä muuta kuin uusiksi, mutta eri tavalla.
+
+Lähdetään tekemään vaikka niin, että orja numero 1 tallentaa jatkuvasti Suomen lentokenttien METAR-tietoja, ja pistetään toinen orja keräämään tietoa Euroopan suurimmilta kentiltä.
+
+METAR on siinä mielessä helpompi, koska sen tosiaan saa suoraan komentoriviltä. Ei tarvita curleja.
+
+
 
 
 
