@@ -4,7 +4,7 @@
 
 Tässä raportissa käydään läpi tekemääni Palvelinten Hallinta -kurssin miniprojektia. Sain alkuun sellaisen idean, että teen herra-orja-arkkitehtuurin, jossa orjakoneet hakisivat verkosta jotain jokaiselle erikseen määriteltyä dataa, tallentaisivat sitä, ja lopulta lähettäisivät koosteen näistä herrakoneelle.
 
-Tein tehtävää itsenäisesti kotonani lauantaina 9.12. Tein tehtävät HP pavilion kannettavallani, jossa on Intel i5-9300H prosessori, 16gt RAM, 512gt SSD ja Windows 10 home-käyttöjärjestelmä. 
+Tein tehtävää itsenäisesti kotonani lauantaina 9.12. Viimeistelin itse raportin maanantaina 11.12. Tein tehtävät HP pavilion kannettavallani, jossa on Intel i5-9300H prosessori, 16gt RAM, 512gt SSD ja Windows 10 home-käyttöjärjestelmä. Tehtävissä on käytetty apuna Tero Karvisen materiaaleja ja linkkejä sivulta _"Infra as code"_. (Karvinen, 2023)
 
 Päätin alkaa keräämään säätietoja. Tavoitteena on orjakoneilla ajaa automaattisesti 30 minuutin välein komento, joka printtaa useamman kaupungin sen hetkisen sään, ja lisää mukaan vielä aikaleiman. Tiedot tallennetaan yhteen jokaiselle kaupungille erilliseen ”loki”-tiedostoon, joka päivittyy aina kun komento ajetaan automaattisesti uudelleen. Tämän jälkeen automatisoidaan myös se, että orjakoneet lähettävät säätietolokin herrakoneelle tietyn väliajoin.
 
@@ -132,8 +132,7 @@ No perhana, ei se näytäkään ihan yhtä nätiltä miltä se näytti aiemmin e
 ![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/fed773c9-bd1a-44e5-8e3f-3419107170e7)
 >Yllä: Vähän erinäköistä kuin alussa testatessa...
 
-
-Ajattelin että ei tuota oikein jaksa katsella, joten päätin yrittää toista dataa. Haetaan tällä kertaa METAR-tietoja, sillä niitä olen itse asiassa aiemmin yrittänyt hakea Linuxin komentoriviltä ja onnistunut siinä.
+Ajattelin että ei tuota oikein jaksa katsella, joten turha yrittää tuota edes puskea herralle, vaan päätin yrittää toista dataa. Haetaan tällä kertaa METAR-tietoja, sillä niitä olen itse asiassa aiemmin yrittänyt hakea Linuxin komentoriviltä ja onnistunut siinä.
 
 Eli tässä kohtaa unohdettiin tämä. Veikkaan että tuo näyttää sen takia erilaiselta, kun käytän Vagrantia Windowsilla. Windowsin komentorivi ja Linux eivät varmaan ihan samoissa mittasuhteissa ole, ja siksi tuo teksti "wrappaantyy" eri tavalla tässä. Mutta ei se mitään.
 
@@ -248,7 +247,18 @@ Tämä syntaksi ajaa jäljempänä olevan komennon jokaisella tunnin ensimmäise
 
 ---
 
-Pikakelaus seuraavaan tasatuntiin, ja pääsemme tarkastamaan miten toimii! Ylempänä mainitsemani minioncachen polku on herralla /var/cache/salt/minion/t001/files/ , joka sisältää orjan t001 tiedostot, jota sieltä pusketaan herralle. Tässä kohtaa näköjään itse orjan tiedostopolkukin on päässyt mukaan, eikä pelkkä tiedosto. Mennään siis aikas syvälle, ja orjalta puskettu tiedosto löytyy nyt herralta osoitteesta `/var/cache/salt/minion/t001/files/usr/local/metar/metarHelsinki.txt`
+Salt Projectin cp.push -kohdassa sanotaan, että toiminto on oletuksena pois käytöstä. Jos sen haluaa käyttöön, tulee configuraatiotiedoston file_recv päivittää arvoon "true". Nopealla haulla löysin config-filen sijainnin, joka sijaitsee herralla kohteessa /etc/salt/master. (Salt Project, s.a.)
+
+Siirrytään kohteeseen komennolla `$ cd /etc/salt` . Siellä `$ ls` ja nähdään että master-niminen tiedosto on tosiaan olemassa. Komennolla `$ sudo nano master` se auki, ja nyt on muuten paljon rivejä. Tässä ei kannata scrollailla ja yrittää jos se pikku präntti iskisi silmään, vaan kätetään nanon "Where is"-toimintoa näppäinyhdistelmällä ctrl + W. Siihen kirjoitan "file_recv", ja löydän haluamani rivin heti!
+
+Siinä kohdassa lukee oletuksena #file_recv: False , joten muokataan sitä ottamalla risuaita pois ja pistämällä Falsen tilalle True. Nyt meillä on file_recv siis käytössä herralla, ja tiedostojen pusku orjalta pitäisi onnistua!
+
+![image](https://github.com/hautadata/palvelintenhallinta-jh-moduuli/assets/148875340/b59a9021-15c6-48de-a8f1-0760a93ecb2c)
+>Yllä: file_recv: True
+
+---
+
+Pikakelaus seuraavaan tasatuntiin, ja pääsemme tarkastamaan miten toimii! Aiemmin mainitsemani minioncachen polku on herralla /var/cache/salt/minion/t001/files/ , joka sisältää orjan t001 tiedostot, jota sieltä pusketaan herralle. Tässä kohtaa näköjään itse orjan tiedostopolkukin on päässyt mukaan, eikä pelkkä tiedosto. Mennään siis aikas syvälle, ja orjalta puskettu tiedosto löytyy nyt herralta osoitteesta `/var/cache/salt/minion/t001/files/usr/local/metar/metarHelsinki.txt`
 
 Suoritetaan cat-komento sille, ja nähdään että homma toimii erittäin hyvin! Meillä on tasatunnila 19:00:01 UTC (Suomen aika +2 tuntia) aikaleima, ja sen alla kenttien METAR-tiedotteet. Ne ovat päivittyneet n. 10 minuuttia aikaisemmin, UTC-ajalla 1850. Jes!
 
@@ -326,15 +336,22 @@ Huhhuh. Käyn vielä katsomassa parin tunnin päästä tuleeko muutoksia ja tied
 
 ## Itsearviointi
 
+Olen melko tyytyväinen työni lopputulokseen. Se ei ole vaativimmasta päästä, mutta lähtötasooni (nolla) nähden siinä oli itselleni henkilökohtaisesti sopivaa haastetta. Moduulin aikana tuli opittua uusia asioita, kuten cronin käyttöä, cp.pushia ja master configuration tiedoston muokkausta. Kaiken kaikkiaan moduulia oli hauska työstää, vaikkakin se oli hieman aikaa vaativa. Se oli kuitenkin opettavainen kokemus, niin kuin koko kurssikin tähän mennessä! 
 
-
+Kiitokset Terolle mahtavasta kurssista, ja kiitos sinulle jos jaksoit lukea tänne asti! Hyvää joulun odotusta.
 
 
 ## Lähteet
 
 Awati, R. Techtarget. 2/2023. What is crontab?. Luettavissa: https://www.techtarget.com/searchdatacenter/definition/crontab. Luettu: 9.12.2023.
 
+Hautadata. 2023. H5 - CSI Kerava. Luettavissa: https://github.com/hautadata/palvelintenhallinta-jh/blob/main/h5-csikervo.md.
+
 Ilmatieteenlaitos. Ilmailusää. Luettavissa: https://ilmailusaa.fi/index.html#flash_checkbox=checked#id=radar#map=southern-finland#level=null#top=0. Luettu: 9.12.2023.
+
+Karvinen, T. 13.10.2023. Infra as Code 2023. Luettavissa: https://terokarvinen.com/2023/configuration-management-2023-autumn/. 
+
+Salt Project. s.a. CONFIGURING THE SALT MASTER. Luettavissa: https://docs.saltproject.io/en/latest/ref/configuration/master.html. Luettu: 9.12.2023.
 
 Salt Project. s.a. SALT.MODULES.CP. Luettavissa: https://docs.saltproject.io/en/latest/ref/modules/all/salt.modules.cp.html. Luettu: 9.12.2023.
 
