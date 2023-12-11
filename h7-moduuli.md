@@ -12,6 +12,8 @@ Tai näin ainakin luulin aluksi alkavani tekemään... Matkan varrella huomasin 
 
 Lopulta vaihdoin hieman ideaa, ja suunnitelma vaihtuikin siihen, että 2 orjakonetta printtaavat minulle ilmailussa käytettäviä METAR-säätiedotteita. Tästä lisää alempana!
 
+Tätä moduulia varten loin erillisen repositoryn. Kurssin muut tehtävät löytyvät toisesta repostani, osoitteesta https://github.com/hautadata/palvelintenhallinta-jh
+
 ## Ensin käsin…
 
 Kuten kurssilla on jo varmasti opittu, lähdetään ensin kokeilemaan käsin, ja vasta sen jälkeen automatisoimaan. Tätä varten hyödynnän aiemmissakin tehtävissä käyttämääni, kurssin alussa luotua Debian 12-virtuaalikonetta VirtualBoxissa.
